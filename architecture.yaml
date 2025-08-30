@@ -1,0 +1,25 @@
+                             ┌───────────────┐
+                             │   bot.py      │
+                             │  (Main Bot)   │
+                             └─────┬─────────┘
+                                   │ Loads
+                                   ▼
+        ┌───────────────┬───────────────┬───────────────┐
+        │               │               │               │
+        ▼               ▼               ▼               ▼
+┌─────────────┐   ┌─────────────┐  ┌──────────────┐  ┌──────────────┐
+│ cogs/users  │   │ cogs/codes  │  │ cogs/reminders│  │ utils/scraper│
+│  Commands:  │   │ Commands:   │  │ Commands:     │  │ Functions:   │
+│ !register   │   │ !codes      │  │ !remind       │  │ scrape_active│
+│ !userinfo   │   │ Notifications│  │ !remindonce   │  │ _codes()     │
+│ Stores user │   │ @everyone   │  │ Date parsing  │  │ API scraping │
+│ info        │   │ alert channel│  │ Optimized loop│  │ HTML parsing │
+└─────┬───────┘   └─────┬───────┘  └─────┬────────┘  └─────┬────────┘
+      │                 │               │                  │
+      │                 │               │                  │
+      ▼                 ▼               ▼                  ▼
+┌──────────────┐   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Database /   │   │ Discord API  │  │ Discord API  │  │ Game / Web   │
+│ JSON Storage │   │ Messages /   │  │ Messages /   │  │ API / Website│
+│ Users & Codes│   │ Alerts       │  │ Reminders    │  │ Scraped Data │
+└──────────────┘   └──────────────┘  └──────────────┘  └──────────────┘

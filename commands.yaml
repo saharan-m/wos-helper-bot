@@ -1,0 +1,7 @@
+!codes                  → Show active gift codes
+!register <player_id>    → Register user
+!listusers               → List all registered users
+!unregister              → Remove yourself
+!remind HH:MM Message    → Repeat reminder every 2 days
+!remindonce HH:MM Message→ One-time reminder
+!setchannel #channel     → Set default channel for nickname updates

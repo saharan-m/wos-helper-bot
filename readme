@@ -1,0 +1,89 @@
+🕹️ Whiteout Survival Discord Bot
+
+
+
+
+
+
+A modular Discord bot for player info, gift codes, and reminders for Whiteout Survival.
+
+⚙️ Bot Setup & Management
+Feature	Description
+Automatic Bot Token Handling	Prompts for your Discord bot token on first run and saves it to .env or token.txt.
+Logging System	Logs key actions, errors, and warnings in terminal. Shows clear markers when the bot is running.
+Command Help (!help)	Polished embed with sections, emojis, examples, spacing, thumbnail, and footer tagline.
+2️⃣ User Management
+Command	Description
+!register <game_id>	Register a user's Game ID. Checks API for validity and logs failures.
+!userinfo <game_id>	Fetch player info and display:
+• Nickname
+• Furnace Level
+• Avatar Image
+• State Number (kid)
+• Furnace Image (stove_lv_content)
+
+Auto Update:
+
+Checks regularly for nickname or info changes.
+
+Sends notifications if updates are detected.
+
+3️⃣ Gift Code Scraper & Notifications
+Feature	Description
+Scrape Active Codes	Scrapes WOS Gift Codes
+ for currently active codes.
+Notification System	Sends alerts to a configured channel and mentions @everyone when new codes appear.
+Commands	!codes — Lists currently active codes. Option to configure alert channel.
+Scrape Interval	Default: every 15 minutes. Optimized for minimal CPU usage.
+4️⃣ Reminder System
+Command	Description
+!remind <HH:MM UTC> <message>	Recurring reminder (can repeat every 2 days). Mentions @everyone.
+!remindonce <HH:MM UTC> <message>	One-time reminder. Checks frequently only in the last 30 seconds.
+Time & Date Parsing	Accepts HH:MM UTC (defaults to today) or YYYY-MM-DD HH:MM UTC.
+Reminder Updates	Automatic scheduling to avoid CPU overuse and logs reminders being sent.
+5️⃣ Future-Proof Features
+
+Auto Redemption of Gift Codes (Planned): Captcha handling required.
+
+Extendable Modular Design:
+
+bot.py
+
+cogs/users.py
+
+cogs/codes.py
+
+cogs/reminders.py
+
+utils/scraper.py
+
+Easy to add new features like auto-redeem or alerts.
+
+6️⃣ Other Utilities
+
+Error Handling & Logs: Tracks failed commands, scraping errors, invalid inputs.
+
+Database: Stores registered users and keeps track of scraped codes and alerts.
+
+🚀 Getting Started
+git clone https://github.com/yourusername/wos-discord-bot.git
+cd wos-discord-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python bot.py
+
+
+On first run, you’ll be prompted for your bot token.
+
+Set the alert channel for gift codes using !setchannel <channel_id>.
+
+🎯 Features at a Glance
+Category	Highlights
+User Info	Register users, fetch nickname, furnace level, avatar, and state number.
+Gift Codes	Scrape active codes every 15 minutes, notify channel with @everyone.
+Reminders	Recurring & one-time reminders with date & time parsing.
+Logging	Terminal logs for commands, errors, and reminders.
+Modular	Easily extendable, clean folder structure, ready for new features.
+
+✅ Enjoy automated game updates, code notifications, and reminders—all in one bot!
