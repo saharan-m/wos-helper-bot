@@ -86,4 +86,28 @@ Reminders	Recurring & one-time reminders with date & time parsing.
 Logging	Terminal logs for commands, errors, and reminders.
 Modular	Easily extendable, clean folder structure, ready for new features.
 
+
+# 1. Build the Docker image
+docker build -t discord-bot .
+
+# 2. Run the container (ensure data/token.txt exists)
+docker run -d \
+  --name discord-bot \
+  -v $(pwd)/data:/app/data \
+  --restart unless-stopped \
+  discord-bot
+
+# 3. View logs
+docker logs -f discord-bot
+
+# 4. Update the bot
+docker stop discord-bot
+docker rm discord-bot
+docker build -t discord-bot .
+docker run -d \
+  --name discord-bot \
+  -v $(pwd)/data:/app/data \
+  --restart unless-stopped \
+  discord-bot
+
 ✅ Enjoy automated game updates, code notifications, and reminders—all in one bot!
