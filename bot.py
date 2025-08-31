@@ -34,7 +34,9 @@ async def load_extensions():
         "cogs.health",
         "cogs.help",
         "cogs.settings",
-        "cogs.auto_redeem"
+        "cogs.auto_redeem",
+        "cogs.verify",
+        "cogs.admin"
     ]
     for ext in extensions:
         try:

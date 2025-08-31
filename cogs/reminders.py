@@ -16,11 +16,21 @@ class Reminder(commands.Cog):
     def cog_unload(self):
         self.check_reminders.cancel()
 
+    def get_admin_cog(self):
+        return self.bot.get_cog("Admin")
+
+    def is_admin_or_owner(self, user: discord.User) -> bool:
+        admin_cog = self.get_admin_cog()
+        if not admin_cog:
+            return False
+        return admin_cog.is_admin_or_owner(user)
+
     def parse_time(self, input_str: str) -> datetime:
         input_str = input_str.strip().upper().replace("  ", " ")
         if not input_str.endswith("UTC"):
-            raise ValueError("Time must end with 'UTC'")
+            input_str += " UTC"
         input_str = input_str[:-3].strip()
+
         for fmt in ["%Y-%m-%d %H:%M", "%H:%M"]:
             try:
                 dt = datetime.strptime(input_str, fmt)
@@ -31,34 +41,36 @@ class Reminder(commands.Cog):
                 continue
         raise ValueError("Invalid time format. Use 'HH:MM UTC' or 'YYYY-MM-DD HH:MM UTC'")
 
-    @app_commands.command(name="remindonce", description="Set a one-time reminder")
-    @app_commands.describe(time_str="Time (HH:MM UTC or YYYY-MM-DD HH:MM UTC)", message="Reminder message")
+    @app_commands.command(name="remindonce", description="Set a one-time reminder (admins only)")
     async def remind_once(self, interaction: discord.Interaction, time_str: str, message: str):
+        if not self.is_admin_or_owner(interaction.user):
+            await interaction.response.send_message("🚫 Only admins can set reminders.", ephemeral=True)
+            return
         try:
-            target_time = self.parse_time(time_str + " UTC")
+            target_time = self.parse_time(time_str)
         except ValueError as e:
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
             return
 
-        reminder = {"channel_id": interaction.channel.id, "message": message, "time": target_time, "once": True}
-        self.reminders.append(reminder)
+        self.reminders.append({"channel_id": interaction.channel.id, "message": message, "time": target_time, "once": True})
         await interaction.response.send_message(
             f"✅ One-time reminder set for {target_time.strftime('%Y-%m-%d %H:%M UTC')}.", ephemeral=True
         )
 
-    @app_commands.command(name="remind", description="Set a recurring daily reminder")
-    @app_commands.describe(time_str="Time (HH:MM UTC)", message="Reminder message")
-    async def remind(self, interaction: discord.Interaction, time_str: str, message: str):
+    @app_commands.command(name="beartrap", description="Set a Bear Trap reminder (every 2 days, admins only)")
+    async def bear_trap(self, interaction: discord.Interaction, time_str: str, message: str):
+        if not self.is_admin_or_owner(interaction.user):
+            await interaction.response.send_message("🚫 Only admins can set reminders.", ephemeral=True)
+            return
         try:
-            target_time = self.parse_time(time_str + " UTC")
+            target_time = self.parse_time(time_str)
         except ValueError as e:
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
             return
 
-        reminder = {"channel_id": interaction.channel.id, "message": message, "time": target_time, "once": False}
-        self.reminders.append(reminder)
+        self.reminders.append({"channel_id": interaction.channel.id, "message": message, "time": target_time, "once": False, "interval_days": 2})
         await interaction.response.send_message(
-            f"✅ Daily reminder set for {target_time.strftime('%H:%M UTC')}.", ephemeral=True
+            f"✅ Bear Trap reminder set for {target_time.strftime('%H:%M UTC')} (every 2 days).", ephemeral=True
         )
 
     @tasks.loop(seconds=30)
@@ -71,10 +83,11 @@ class Reminder(commands.Cog):
                 channel = self.bot.get_channel(reminder["channel_id"])
                 if channel:
                     await channel.send(f"@everyone ⏰ Reminder: {reminder['message']}")
-                if reminder["once"]:
+                if reminder.get("once"):
                     self.reminders.remove(reminder)
                 else:
-                    reminder["time"] += timedelta(days=1)
+                    interval = reminder.get("interval_days", 1)
+                    reminder["time"] += timedelta(days=interval)
 
     @check_reminders.before_loop
     async def before_check_reminders(self):

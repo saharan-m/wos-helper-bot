@@ -1,53 +1,45 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
-import json
-import os
-import logging
-from utils import api
+from utils import api, storage
+import json, os, logging
 
-logger = logging.getLogger("users")
-
+logger = logging.getLogger("discord-bot.users")
 DATA_FILE = "data/users.json"
 
+def load_users():
+    if not os.path.exists(DATA_FILE):
+        return {}
+    try:
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        logger.error("users.json corrupt, resetting")
+        return {}
+
+def save_users(users):
+    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+    with open(DATA_FILE, "w") as f:
+        json.dump(users, f, indent=2)
 
 class Users(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.users = self.load_users()
+        self.users = load_users()
 
-    def load_users(self):
-        if not os.path.exists(DATA_FILE):
-            return {}
-        with open(DATA_FILE, "r") as f:
-            try:
-                data = json.load(f)
-                if not isinstance(data, dict):  # 🚑 ensure dict, not list
-                    logger.warning("users.json was not a dict, resetting to {}")
-                    return {}
-                return data
-            except json.JSONDecodeError:
-                logger.error("❌ Failed to load users.json (corrupt). Resetting.")
-                return {}
-
-    def save_users(self):
-        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-        with open(DATA_FILE, "w") as f:
-            json.dump(self.users, f, indent=2)
-
-    @commands.command(name="register")
-    async def register(self, ctx, game_id: str):
-        """Register your Whiteout Survival game ID"""
-        discord_id = str(ctx.author.id)
-
+    @app_commands.command(name="register", description="Register your WOS Game ID")
+    @app_commands.describe(game_id="Your Whiteout Survival Game ID")
+    async def register(self, interaction: discord.Interaction, game_id: str):
+        discord_id = str(interaction.user.id)
         data = await api.get_player_info(game_id)
         if not data or "data" not in data:
-            await ctx.send(f"⚠️ Failed to fetch data for Game ID `{game_id}`. Please check the ID.")
-            logger.error(f"Register failed: Could not fetch API data for {game_id}")
+            await interaction.response.send_message(
+                f"⚠️ Failed to fetch data for Game ID `{game_id}`.", ephemeral=True
+            )
             return
-
         player = data["data"]
-
-        # Save full player info
+        # Save user info
         self.users[discord_id] = {
             "game_id": str(player.get("fid")),
             "nickname": player.get("nickname"),
@@ -56,73 +48,60 @@ class Users(commands.Cog):
             "furnace_image": player.get("stove_lv_content"),
             "avatar": player.get("avatar_image"),
         }
+        save_users(self.users)
+        try:
+            await interaction.user.edit(nick=player.get("nickname"))
+        except discord.Forbidden:
+            logger.warning(f"Missing permission to update nickname for {interaction.user}")
+        await interaction.response.send_message(
+            f"✅ Registered **{player.get('nickname')}** (Game ID: {player.get('fid')})",
+            ephemeral=True
+        )
 
-        self.save_users()
-        await ctx.send(f"✅ Registered **{player.get('nickname')}** (Game ID: {player.get('fid')})")
-        logger.info(f"Registered {ctx.author} as {player.get('nickname')} ({game_id})")
-
-    @commands.command(name="userinfo")
-    async def userinfo(self, ctx, target: str = None):
-        """Check a user's registered game info or fetch by Game ID"""
+    @app_commands.command(name="userinfo", description="Get player info")
+    @app_commands.describe(target="Mention user or enter Game ID (optional)")
+    async def userinfo(self, interaction: discord.Interaction, target: str = None):
         game_id = None
         member = None
-
-        # Case 1: no argument -> use self
         if target is None:
-            discord_id = str(ctx.author.id)
+            discord_id = str(interaction.user.id)
             if discord_id not in self.users:
-                await ctx.send("❌ You are not registered. Use `!register <game_id>` first.")
-                logger.warning(f"{ctx.author} tried !userinfo but is not registered.")
+                await interaction.response.send_message(
+                    "❌ You are not registered.", ephemeral=True
+                )
                 return
             game_id = self.users[discord_id]["game_id"]
-            member = ctx.author
-
-        # Case 2: mentioned user
-        elif target.isdigit() is False and ctx.message.mentions:
-            member = ctx.message.mentions[0]
-            discord_id = str(member.id)
-            if discord_id not in self.users:
-                await ctx.send(f"❌ {member.mention} is not registered yet.")
-                logger.warning(f"Lookup failed: {member} not registered.")
+            member = interaction.user
+        elif interaction.guild and target in [m.mention for m in interaction.guild.members]:
+            member = interaction.guild.get_member(int(target.strip("<@!>")))
+            if not member or str(member.id) not in self.users:
+                await interaction.response.send_message(
+                    f"❌ {target} is not registered.", ephemeral=True
+                )
                 return
-            game_id = self.users[discord_id]["game_id"]
-
-        # Case 3: raw game ID
-        elif target.isdigit():
+            game_id = self.users[str(member.id)]["game_id"]
+        else:
             game_id = target
-            logger.info(f"{ctx.author} requested info for raw Game ID {game_id}")
 
-        # Fetch from API
         data = await api.get_player_info(game_id)
         if not data or "data" not in data:
-            await ctx.send(f"⚠️ Failed to fetch info for Game ID `{game_id}`.")
-            logger.error(f"API returned no data for Game ID {game_id}")
+            await interaction.response.send_message(
+                f"⚠️ Failed to fetch info for Game ID `{game_id}`.", ephemeral=True
+            )
             return
-
         player = data["data"]
-
-        # Embed formatting
         embed = discord.Embed(
             title=f"🎮 Player Info: {player.get('nickname')}",
             color=discord.Color.blue()
         )
         embed.set_thumbnail(url=player.get("avatar_image"))
-
         embed.add_field(name="Game ID", value=player.get("fid"), inline=True)
         embed.add_field(name="State ID", value=player.get("kid"), inline=True)
         embed.add_field(name="Furnace Level", value=player.get("stove_lv"), inline=True)
-
         embed.set_image(url=player.get("stove_lv_content"))
-
         if member:
-            embed.set_footer(
-                text=f"Requested by {ctx.author}",
-                icon_url=ctx.author.avatar.url if ctx.author.avatar else None
-            )
+            embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        await ctx.send(embed=embed)
-        logger.info(f"Sent player info for Game ID {game_id}: {player}")
-
-
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Users(bot))

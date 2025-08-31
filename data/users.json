@@ -8,14 +8,6 @@
     "avatar_image": "https://gof-formal-avatar.akamaized.net/avatar/2025/08/04/jNq3ll_1754318196.png",
     "total_recharge_amount": 0
   },
-  "1344803686257397790": {
-    "game_id": "387066679",
-    "nickname": "~ponydododo~",
-    "state_id": 2544,
-    "furnace_level": 45,
-    "furnace_image": "https://gof-formal-avatar.akamaized.net/img/icon/stove_lv_3.png",
-    "avatar": "https://gof-formal-avatar.akamaized.net/avatar/2025/08/25/3m4WDp_1756156453.png"
-  },
   "344309649400659970": {
     "game_id": "418985005",
     "nickname": "\u098f\u6708\u8bfa\u02c7",
@@ -23,5 +15,13 @@
     "furnace_level": 46,
     "furnace_image": "https://gof-formal-avatar.akamaized.net/img/icon/stove_lv_3.png",
     "avatar": "https://gof-formal-avatar.akamaized.net/avatar/2025/08/28/Xv1OgA_1756360330.png"
+  },
+  "1344803686257397790": {
+    "game_id": "422841259",
+    "nickname": "GunnerIsGay",
+    "state_id": 2687,
+    "furnace_level": 40,
+    "furnace_image": "https://gof-formal-avatar.akamaized.net/img/icon/stove_lv_2.png",
+    "avatar": "https://gof-formal-avatar.akamaized.net/avatar/2025/08/29/Kjr6qM_1756459341.png"
   }
 }
