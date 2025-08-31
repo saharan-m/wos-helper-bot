@@ -12,35 +12,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger("discord-bot")
 
-# === Custom Help Command ===
-class MyHelpCommand(commands.MinimalHelpCommand):
-    async def send_pages(self):
-        destination = self.get_destination()
-        embed = discord.Embed(
-            title="🤖 Bot Commands",
-            description="Here’s a list of available commands:",
-            color=discord.Color.green()
-        )
-        for page in self.paginator.pages:
-            embed.add_field(name="Commands", value=page, inline=False)
-        await destination.send(embed=embed)
-
 # === Bot Setup ===
 intents = discord.Intents.default()
 intents.messages = True
 intents.guilds = True
-intents.message_content = True  # Needed to read command text
-intents.members = True          # Needed for user lookups
+intents.message_content = True
+intents.members = True
 
 bot = commands.Bot(
     command_prefix="!",
     intents=intents,
-    help_command=MyHelpCommand()
+    help_command=None  # We use slash commands instead
 )
 
 # === Load Extensions ===
 async def load_extensions():
-    extensions = ["cogs.users", "cogs.codes", "cogs.reminders", "cogs.health"]
+    extensions = [
+        "cogs.users",
+        "cogs.codes",
+        "cogs.reminders",
+        "cogs.health",
+        "cogs.help",
+        "cogs.settings",
+        "cogs.auto_redeem"
+    ]
     for ext in extensions:
         try:
             await bot.load_extension(ext)
@@ -48,18 +43,32 @@ async def load_extensions():
         except Exception as e:
             logger.error(f"❌ Failed to load extension {ext}: {e}")
 
+# === Sync slash commands with Discord ===
 @bot.event
 async def on_ready():
     logger.info(f"🤖 Bot is online as {bot.user} (ID: {bot.user.id})")
-    await bot.change_presence(activity=discord.Game(name="!help for commands"))
+    # Register slash commands globally (can take up to 1 hour) or per guild for instant update
+    # For development/testing, use guild-specific IDs to speed up
+    GUILD_IDS = []  # Optional: add guild IDs to sync immediately
+    if GUILD_IDS:
+        for guild_id in GUILD_IDS:
+            guild = discord.Object(id=guild_id)
+            await bot.tree.sync(guild=guild)
+            logger.info(f"🔄 Synced slash commands to guild {guild_id}")
+    else:
+        await bot.tree.sync()
+        logger.info("🔄 Synced global slash commands")
+
+    await bot.change_presence(activity=discord.Game(name="Use /help"))
 
 # === Main Entrypoint ===
 async def main():
-    # Ensure token.txt exists or ask for token
-    token_file = "data/token.txt"
+    # Ensure data folder exists
     if not os.path.exists("data"):
         os.makedirs("data")
 
+    # Load token
+    token_file = "data/token.txt"
     if os.path.exists(token_file):
         with open(token_file, "r") as f:
             TOKEN = f.read().strip()

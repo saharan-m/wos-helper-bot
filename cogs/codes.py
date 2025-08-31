@@ -1,9 +1,10 @@
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 import logging
-from utils.scraper import scrape_active_codes  # your scraper function
+from utils.scraper import scrape_active_codes
 
-logger = logging.getLogger('discord-bot')
+logger = logging.getLogger('discord-bot.codes')
 
 class Codes(commands.Cog):
     """Handles gift code scraping and notifications."""
@@ -11,50 +12,40 @@ class Codes(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.previous_codes = set()
-        self.alert_channel_id = None  # store alert channel ID
+        self.alert_channel_id = None
         self.check_codes.start()
 
-    @commands.command(name="setalert")
-    async def set_alert_channel(self, ctx):
-        """Set the channel for gift code alerts."""
-        self.alert_channel_id = ctx.channel.id
-        await ctx.send(f"✅ This channel has been set for gift code alerts: {ctx.channel.mention}")
-        logger.info(f"Alert channel set to {ctx.channel.name} ({ctx.channel.id})")
+    @app_commands.command(name="setalert", description="Set the channel for gift code alerts")
+    async def set_alert_channel(self, interaction: discord.Interaction):
+        self.alert_channel_id = interaction.channel.id
+        await interaction.response.send_message(
+            f"✅ This channel has been set for gift code alerts: {interaction.channel.mention}", ephemeral=True
+        )
+        logger.info(f"Alert channel set to {interaction.channel.name} ({interaction.channel.id})")
 
-    @commands.command(name="codes")
-    async def show_active_codes(self, ctx):
-        """Show current active codes."""
+    @app_commands.command(name="codes", description="Show current active WOS gift codes")
+    async def show_active_codes(self, interaction: discord.Interaction):
         active_codes = await scrape_active_codes()
         if not active_codes:
-            await ctx.send("⚠️ No active gift codes found at the moment.")
+            await interaction.response.send_message("⚠️ No active gift codes found at the moment.", ephemeral=True)
             return
 
-        message = "**🎁 Active WOS Gift Codes:**\n"
-        for code in active_codes:
-            message += f"• `{code}`\n"
-
-        await ctx.send(message)
+        message = "**🎁 Active WOS Gift Codes:**\n" + "\n".join(f"• `{c}`" for c in active_codes)
+        await interaction.response.send_message(message, ephemeral=True)
 
     @tasks.loop(minutes=15)
     async def check_codes(self):
-        """Background task that scrapes website and notifies on new codes."""
         try:
             active_codes = await scrape_active_codes()
         except Exception as e:
             logger.error(f"Failed to scrape codes: {e}")
             return
 
-        new_codes = [code for code in active_codes if code not in self.previous_codes]
-
-        if not new_codes:
-            return  # nothing new
-
-        self.previous_codes.update(new_codes)
-
-        if not self.alert_channel_id:
-            logger.warning("No alert channel set; skipping notification.")
+        new_codes = [c for c in active_codes if c not in self.previous_codes]
+        if not new_codes or not self.alert_channel_id:
             return
 
+        self.previous_codes.update(new_codes)
         channel = self.bot.get_channel(self.alert_channel_id)
         if not channel:
             logger.warning(f"Alert channel ID {self.alert_channel_id} not found.")

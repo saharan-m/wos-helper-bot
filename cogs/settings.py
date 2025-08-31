@@ -1,3 +1,5 @@
+import discord
+from discord import app_commands
 from discord.ext import commands
 from utils.storage import load_json, save_json
 
@@ -7,15 +9,15 @@ class Settings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
-    async def setchannel(self, ctx, channel: commands.TextChannelConverter):
-        """Set the default channel for notifications. Usage: !setchannel #channel"""
+    @app_commands.command(name="setchannel", description="Set the default channel for notifications")
+    @app_commands.describe(channel="Mention the channel")
+    async def setchannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         settings = load_json(SETTINGS_FILE, {})
-        # channel param comes as Channel object when using annotation, but to be safe:
-        ch = getattr(channel, "id", None) or channel
-        settings["channel_id"] = ch
+        settings["channel_id"] = channel.id
         save_json(SETTINGS_FILE, settings)
-        await ctx.send(f"✅ Notifications will now go to {ctx.message.channel.mention if ch == ctx.channel.id else f'<#{ch}>'}")
+        await interaction.response.send_message(
+            f"✅ Notifications will now go to {channel.mention}", ephemeral=True
+        )
 
 async def setup(bot):
     await bot.add_cog(Settings(bot))

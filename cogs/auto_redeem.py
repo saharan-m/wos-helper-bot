@@ -20,17 +20,14 @@ class AutoRedeem(commands.Cog):
     @tasks.loop(minutes=1)
     async def check_codes(self):
         await self.bot.wait_until_ready()
-        # try to get Codes cog and call its scrape_codes (async)
         codes_cog = self.bot.get_cog("Codes")
         if not codes_cog:
             return
         try:
-            codes = await codes_cog.scrape_codes()
-        except Exception as e:
-            logger.exception("Failed to scrape codes")
+            codes = await codes_cog.scrape_active_codes()
+        except Exception:
             return
 
-        # extract active code strings
         active_codes = [c["code"] for c in codes if isinstance(c, dict) and not c.get("error")]
         last = load_json(LAST_CODES_FILE, [])
         new = [c for c in active_codes if c not in last]
@@ -55,7 +52,6 @@ class AutoRedeem(commands.Cog):
                 if channel:
                     await channel.send(f"🎁 Auto-redeem attempt for **{code}** → <@{u['discord_id']}> : {status_msg}")
 
-        # persist current active codes as last seen
         save_json(LAST_CODES_FILE, active_codes)
         logger.info(f"AutoRedeem processed new codes: {new}")
 
